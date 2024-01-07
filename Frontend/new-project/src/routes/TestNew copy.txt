@@ -1,0 +1,709 @@
+import React, { useState, useEffect } from 'react';
+import { classNames } from 'primereact/utils';
+import { FilterMatchMode, FilterOperator } from 'primereact/api';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { InputText } from 'primereact/inputtext';
+import { Dropdown } from 'primereact/dropdown';
+import { MultiSelect } from 'primereact/multiselect';
+import { Button } from 'primereact/button';
+import { Calendar } from 'primereact/calendar';
+import { Tag } from 'primereact/tag';
+import { Card } from 'primereact/card';
+import { Panel } from 'primereact/panel';
+import { TriStateCheckbox } from 'primereact/tristatecheckbox';
+import { SelectButton } from 'primereact/selectbutton';
+// import { CustomerService } from './service/CustomerService';
+
+export default function BasicFilterDemo() {
+    const [customers, setCustomers] = useState(null);
+    const [sizeOptions] = useState([
+        { label: 'Small', value: 'small' },
+        { label: 'Normal', value: 'normal' },
+        { label: 'Large', value: 'large' }
+    ]);
+    const [size, setSize] = useState(sizeOptions[1].value);
+    const columns = [
+        { field: 'kodeProjek', header: 'Kode Projek' },
+        { field: 'namaProjek', header: 'Nama Projek' },
+        { field: 'statusProjek', header: 'Status Projek' },
+        { field: 'namaDivisi', header: 'Nama Divisi' },
+        { field: 'namaDepartemen', header: 'Nama Departemen' },
+        { field: 'namaMaterialGrup', header: 'Nama Material Group' },
+        { field: 'kodeMaterial', header: 'Kode Material' },
+        { field: 'namaMaterial', header: 'Nama Material' },
+        { field: 'uom', header: 'UOM' },
+        { field: 'nomorPo', header: 'Nomor Po' },
+        { field: 'tanggalPo', header: 'Tanggal Po' },
+        { field: 'poQuantity', header: 'Po Quantity' },
+        { field: 'poPrice', header: 'Po Price' },
+        { field: 'poTotalValue', header: 'Po Total Value' },
+        { field: 'kodeVendor', header: 'Kode Vendor' },
+        { field: 'namaVendor', header: 'Nama Vendor' },
+        { field: 'kodeGr', header: 'Kode Gr' },
+        { field: 'tanggalGr', header: 'Tanggal Gr' },
+        { field: 'grQuantity', header: 'Gr Quantity' },
+        { field: 'grValue', header: 'Gr value' },
+        { field: 'outstandingGr', header: 'Outstading Gr' },
+        { field: 'kodeGi', header: 'Kode Gi' },
+        { field: 'tanggalGi', header: 'Tanggal Gi' },
+        { field: 'giQuantity', header: 'Gi Quantity' },
+        { field: 'giValue', header: 'Gi Value' },
+        { field: 'inventory', header: 'Inventory' },
+        { field: 'inventorValue', header: 'Inventory Value' },
+    ];
+    const [visibleColumns, setVisibleColumns] = useState(columns);
+
+
+    const onColumnToggle = (event) => {
+        let selectedColumns = event.value;
+        let orderedSelectedColumns = columns.filter((col) => selectedColumns.some((sCol) => sCol.field === col.field));
+
+        setVisibleColumns(orderedSelectedColumns);
+    };
+    // const [filters, setFilters] = useState(null);
+    const [filters, setFilters] = useState({
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        namaProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        namaMaterial: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        statusProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        nomorPo: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        representative: { value: null, matchMode: FilterMatchMode.IN },
+        tanggalPo: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] }
+        // tanggalPo: { value: null, matchMode: FilterMatchMode.DATE_IS }
+    });
+    const [loading, setLoading] = useState(true);
+    const [globalFilterValue, setGlobalFilterValue] = useState('');
+    const [representatives] = useState([
+        { name: 'Amy Elsner', image: 'amyelsner.png' },
+        { name: 'Anna Fali', image: 'annafali.png' },
+        { name: 'Asiya Javayant', image: 'asiyajavayant.png' },
+        { name: 'Bernardo Dominic', image: 'bernardodominic.png' },
+        { name: 'Elwin Sharvill', image: 'elwinsharvill.png' },
+        { name: 'Ioni Bowcher', image: 'ionibowcher.png' },
+        { name: 'Ivan Magalhaes', image: 'ivanmagalhaes.png' },
+        { name: 'Onyama Limba', image: 'onyamalimba.png' },
+        { name: 'Stephen Shaw', image: 'stephenshaw.png' },
+        { name: 'XuXue Feng', image: 'xuxuefeng.png' }
+    ]);
+    // const [statuses] = useState(['unqualified', 'qualified', 'new', 'negotiation', 'renewal']);
+    // const statusesName = customers?.map((item) => item.statusProjek );
+    const statusesName = [...new Set(customers?.map((item) => item.statusProjek))];
+
+
+    useEffect(() => {
+        fetchData();
+        setLoading(false);
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            // const response = await fetch(`http://localhost:5000/products`);
+            const response = await fetch(`http://localhost:4000/api/v1/inventory/data`);
+            // const response = await fetch(`https://services.rwahyus.online/api/v1/products`);
+            const jsonData = await response.json();
+            console.log(jsonData);
+            setCustomers(jsonData);
+        } catch (error) {
+            console.log("Error fetching data:", error);
+        }
+    }; // eslint-disable-line react-hooks/exhaustive-deps
+
+    const getCustomers = (data) => {
+        return [...(data || [])].map((d) => {
+            d.date = new Date(d.date);
+
+            return d;
+        });
+    };
+
+    const onGlobalFilterChange = (e) => {
+        const value = e.target.value;
+        let _filters = { ...filters };
+
+        _filters['global'].value = value;
+
+        setFilters(_filters);
+        setGlobalFilterValue(value);
+    };
+
+    const clearFilter = () => {
+        initFilters();
+    };
+    const initFilters = () => {
+        setFilters({
+            global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            namaProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            namaMaterial: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            statusProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            nomorPo: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            representative: { value: null, matchMode: FilterMatchMode.IN },
+            tanggalPo: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] }
+        });
+        setGlobalFilterValue('');
+    };
+
+    const renderHeader = () => {
+        return (
+            <div className="flex justify-between items-center">
+                <div>
+                    <SelectButton value={size} onChange={(e) => setSize(e.value)} options={sizeOptions} />
+                </div>
+                
+                <div>
+                    <span className="p-input-icon-left">
+                        <i className="pi pi-search" />
+                        <InputText value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Keyword Search" />
+                    </span>
+                    <Button type="button" icon="pi pi-filter-slash" label="Clear" outlined onClick={clearFilter} />
+                </div>
+            </div>
+
+        );
+    };
+
+    const countryBodyTemplate = (rowData) => {
+        return (
+            <div className="flex align-items-center gap-2">
+                <img alt="flag" src="https://primefaces.org/cdn/primereact/images/flag/flag_placeholder.png" className={`flag flag-${rowData.country.code}`} style={{ width: '24px' }} />
+                <span>{rowData.country.name}</span>
+            </div>
+        );
+    };
+
+    const representativeBodyTemplate = (rowData) => {
+        const representative = rowData.representative;
+
+        return (
+            <div className="flex align-items-center gap-2">
+                <img alt={representative.name} src={`https://primefaces.org/cdn/primereact/images/avatar/${representative.image}`} width="32" />
+                <span>{representative.name}</span>
+            </div>
+        );
+    };
+
+    const representativesItemTemplate = (option) => {
+        return (
+            <div className="flex align-items-center gap-2">
+                <img alt={option.name} src={`https://primefaces.org/cdn/primereact/images/avatar/${option.image}`} width="32" />
+                <span>{option.name}</span>
+            </div>
+        );
+    };
+
+    const statusBodyTemplate = (rowData) => {
+        return <Tag value={rowData.statusProjek}  />;
+    };
+
+    const statusItemTemplate = (option) => {
+        return <Tag value={option}  />;
+    };
+
+    const verifiedBodyTemplate = (rowData) => {
+        return <i className={classNames('pi', { 'true-icon pi-check-circle': rowData.verified, 'false-icon pi-times-circle': !rowData.verified })}></i>;
+    };
+
+    const representativeRowFilterTemplate = (options) => {
+        return (
+            <MultiSelect
+                value={options.value}
+                options={representatives}
+                itemTemplate={representativesItemTemplate}
+                onChange={(e) => options.filterApplyCallback(e.value)}
+                optionLabel="name"
+                placeholder="Any"
+                className="p-column-filter"
+                maxSelectedLabels={1}
+                style={{ minWidth: '14rem' }}
+            />
+        );
+    };
+
+    const statusRowFilterTemplate = (options) => {
+        return (
+            <Dropdown value={options.value} options={statusesName} onChange={(e) => options.filterApplyCallback(e.value)}  placeholder="Select One" className="p-column-filter" showClear style={{ minWidth: '12rem' }} />
+            // <Dropdown value={options.value} options={statusesName} onChange={(e) => options.filterApplyCallback(e.value)} itemTemplate={statusItemTemplate} placeholder="Select One" className="p-column-filter" showClear style={{ minWidth: '12rem' }} />
+        );
+    };
+
+    const verifiedRowFilterTemplate = (options) => {
+        return <TriStateCheckbox value={options.value} onChange={(e) => options.filterApplyCallback(e.value)} />;
+    };
+
+    const header = renderHeader();
+    const formatDate = (value) => {
+        return value.toLocaleDateString('en-US', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    };
+    // const formatDate = (value) => {
+    //     // Pisahkan tanggal, bulan, dan tahun dari string tanggal sumber
+    //     const parts = value.split('-');
+    //     const year = parseInt(parts[0], 10);
+    //     const month = parseInt(parts[1], 10);
+    //     const day = parseInt(parts[2], 10);
+    
+    //     // Buat objek Date dari nilai yang telah dipisahkan
+    //     const date = new Date(year, month - 1, day);
+    
+    //     // Format tanggal dalam format yang Anda inginkan
+    //     return date.toLocaleDateString('en-US', {
+    //         day: '2-digit',
+    //         month: '2-digit',
+    //         year: 'numeric'
+    //     });
+    // };
+    // const dateBodyTemplate = (rowData) => {
+    //     return formatDate(rowData.tanggalPo);
+    // };
+    const dateBodyTemplate = (rowData) => {
+        const date = new Date(rowData.tanggalPo);
+        return formatDate(date);
+    };
+    
+    const dateFilterTemplate = (options) => {
+        return <Calendar value={options.value} onChange={(e) => options.filterCallback(e.value, options.index)} dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" mask="99/99/9999" />;
+    };
+    const filterApplyTemplate = (options) => {
+        return <Button type="button" icon="pi pi-check" onClick={options.filterApplyCallback} severity="success"></Button>;
+    };
+
+    return (
+        <div className="card">
+            {/* <Card title="Title">
+                <p className="m-0">
+                    Lorem ipsum dolor sit amet, consectetur adipisicing elit. Inventore sed consequuntur error repudiandae 
+                    numquam deserunt quisquam repellat libero asperiores earum nam nobis, culpa ratione quam perferendis esse, cupiditate neque quas!
+                </p>
+            </Card> */}
+            <Panel header="All Data" className='m-9' toggleable>
+            
+                        <div>
+                            <MultiSelect value={visibleColumns} options={columns} optionLabel="header" onChange={onColumnToggle} className="w-full sm:w-20rem" display="chip" />
+                        </div>
+            <DataTable scrollable scrollHeight="1000px" value={customers} size={size} paginator rows={10} rowsPerPageOptions={[5, 10, 20, 50, 100]} dataKey="id" filters={filters} filterDisplay="row" loading={loading} filterMode="lenient" // Tambahkan ini
+                    globalFilterFields={['namaProjek', 'statusProjek', 'nomorPo', 'tanggalPo', 'namaMaterial']} header={header} emptyMessage="No customers found.">
+                {/* <Column field="kodeProjek" header="Kode Projek" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="namaProjek" header="Nama Projek" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="statusProjek" header="Status Projek" showFilterMenu={false} filterMenuStyle={{ width: '14rem' }} style={{ minWidth: '12rem' }}  filter filterElement={statusRowFilterTemplate} />
+                <Column field="namaDivisi" header="Nama Divisi" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="namaDepartemen" header="Nama Departemen" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="namaMaterialGrup" header="Nama MaterialGrup" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="kodeMaterial" header="Kode Material" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="namaMaterial" header="Nama Material" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="uom" header="UOM" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="nomorPo" header="Nomor Po" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="tanggalPo" dataType="date" body={dateBodyTemplate} filterApply={filterApplyTemplate} filterElement={dateFilterTemplate} header="Tanggal Po"  filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="poQuantity" header="Po Quantity" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="poPrice" header="Po Price" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="poTotalValue" header="Po TotalValue" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="kodeVendor" header="Kode Vendor" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="namaVendor" header="Nama Vendor" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="kodeGr" header="Kode Gr" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="tanggalGr" dataType="date" body={dateBodyTemplate} filterApply={filterApplyTemplate} filterElement={dateFilterTemplate} header="Tanggal Gr"  filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="grQuantity" header="Gr Quantity" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="grValue" header="Gr Value" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="outstandingGr" header="Outstanding Gr" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="kodeGi" header="Kode Gi" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="tanggalGi" dataType="date" body={dateBodyTemplate} filterApply={filterApplyTemplate} filterElement={dateFilterTemplate} header="Tanggal Gi"  filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="giQuantity" header="Gi Quantity" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="giValue" header="Gi Value" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="inventory" header="Inventory" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} />
+                <Column field="inventorValue" header="Inventor Value" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} /> */}
+                {/* <Column field="tanggalPo" dataType="date"  header="Tanggal Po" showFilterMenu={false} filter filterPlaceholder="Search by name" style={{ minWidth: '12rem' }} /> */}
+                {/* <Column field="tanggalPo" dataType="date" body={dateBodyTemplate} filterApply={filterApplyTemplate} filterField="tanggalPo" filterMatchMode="date" filterElement={dateFilterTemplate} header="Tanggal Po"  filter filter    Placeholder="Search by name" style={{ minWidth: '12rem' }} /> */}
+                {visibleColumns.map((col) => (
+                    col.field === 'statusProjek' ?(
+                        
+                        <Column key={col.field} field={col.field} header={col.header} showFilterMenu={false} filterMenuStyle={{ width: '14rem' }} filter filterElement={statusRowFilterTemplate} style={{ minWidth: '12rem' }} />
+                        )
+                        :
+                        (
+                        <Column key={col.field} field={col.field} header={col.header} showFilterMenu={false} filterMenuStyle={{ width: '14rem' }} filter filterPlaceholder="Search" style={{ minWidth: '12rem' }} />
+                    )
+                ))}
+                {/* <Column header="Country" filterField="country.name" style={{ minWidth: '12rem' }} body={countryBodyTemplate} filter filterPlaceholder="Search by country" />
+                <Column header="Agent" filterField="representative" showFilterMenu={false} filterMenuStyle={{ width: '14rem' }} style={{ minWidth: '14rem' }}
+                    body={representativeBodyTemplate} filter filterElement={representativeRowFilterTemplate} />
+                <Column field="verified" header="Verified" dataType="boolean" style={{ minWidth: '6rem' }} body={verifiedBodyTemplate} filter filterElement={verifiedRowFilterTemplate} /> */}
+            </DataTable>
+            </Panel>
+        </div>
+    );
+}
+
+//v2 sebelum penggabungan dengan date filter
+import React, { useState, useEffect } from 'react';
+import { classNames } from 'primereact/utils';
+import { FilterMatchMode, FilterOperator } from 'primereact/api';
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { InputText } from 'primereact/inputtext';
+import { Dropdown } from 'primereact/dropdown';
+import { MultiSelect } from 'primereact/multiselect';
+import { Button } from 'primereact/button';
+import { Calendar } from 'primereact/calendar';
+import { Tag } from 'primereact/tag';
+import { Card } from 'primereact/card';
+import { Panel } from 'primereact/panel';
+import { TriStateCheckbox } from 'primereact/tristatecheckbox';
+import { SelectButton } from 'primereact/selectbutton';
+import { ToggleButton } from 'primereact/togglebutton';
+import { Text } from "@chakra-ui/react";
+
+export default function BasicFilterDemo() {
+    const [data, setData] = useState(null);
+    const [columnMinWidths, setColumnMinWidths] = useState({}); // State untuk menyimpan lebar minimum kolom
+    const [headerMinWidths, setHeaderMinWidths] = useState({}); // State untuk menyimpan lebar minimum kolom
+    const [loading, setLoading] = useState(true);
+    const [globalFilterValue, setGlobalFilterValue] = useState('');
+    const statusesName = [...new Set(data?.map((item) => item.statusProjek))];
+    const [sizeOptions] = useState([
+        { label: 'Small', value: 'small' },
+        { label: 'Normal', value: 'normal' },
+        { label: 'Large', value: 'large' }
+    ]);
+    const [size, setSize] = useState(sizeOptions[0].value);
+    const [filters, setFilters] = useState({
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        namaProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        namaMaterial: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        statusProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        nomorPo: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        kodeGi: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        representative: { value: null, matchMode: FilterMatchMode.IN },
+        tanggalPo: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] }
+        // tanggalPo: { value: null, matchMode: FilterMatchMode.DATE_IS }
+    });
+    const columns = [
+        { field: 'kodeProjek', header: 'Kode Projek' },
+        { field: 'namaProjek', header: 'Nama Projek' },
+        { field: 'statusProjek', header: 'Status Projek' },
+        { field: 'namaDivisi', header: 'Nama Divisi' },
+        { field: 'namaDepartemen', header: 'Nama Departemen' },
+        { field: 'namaMaterialGrup', header: 'Nama Material Group' },
+        { field: 'kodeMaterial', header: 'Kode Material' },
+        { field: 'namaMaterial', header: 'Nama Material' },
+        { field: 'uom', header: 'UOM' },
+        { field: 'nomorPo', header: 'Nomor Po' },
+        { field: 'tanggalPo', header: 'Tanggal Po' },
+        { field: 'poQuantity', header: 'Po Quantity' },
+        { field: 'poPrice', header: 'Po Price' },
+        { field: 'poTotalValue', header: 'Po Total Value' },
+        { field: 'kodeVendor', header: 'Kode Vendor' },
+        { field: 'namaVendor', header: 'Nama Vendor' },
+        { field: 'kodeGr', header: 'Kode Gr' },
+        { field: 'tanggalGr', header: 'Tanggal Gr' },
+        { field: 'grQuantity', header: 'Gr Quantity' },
+        { field: 'grValue', header: 'Gr value' },
+        { field: 'outstandingGr', header: 'Outstanding Gr' },
+        { field: 'kodeGi', header: 'Kode Gi' },
+        { field: 'tanggalGi', header: 'Tanggal Gi' },
+        { field: 'giQuantity', header: 'Gi Quantity' },
+        { field: 'giValue', header: 'Gi Value' },
+        { field: 'inventory', header: 'Inventory' },
+        { field: 'inventorValue', header: 'Inventory Value' },
+        { field: 'DOI', header: 'DOI' },
+    ];
+    const [defaultColumns] = useState([
+        { field: 'namaProjek', header: 'Nama Projek' },
+        { field: 'nomorPo', header: 'Nomor Po'  },
+        { field: 'tanggalPo', header: 'Tanggal Po' },
+        { field: 'kodeMaterial', header: 'Kode Material' },
+        { field: 'namaMaterial', header: 'Nama Material' },
+        { field: 'poQuantity', header: 'Po Quantity' },
+        { field: 'uom', header: 'UOM' },
+        { field: 'namaVendor', header: 'Nama Vendor' },
+        { field: 'inventory', header: 'Inventory' },
+        { field: 'inventorValue', header: 'Inventory Value' },
+        { field: 'DOI', header: 'DOI' },
+    ]);
+    const [visibleColumns, setVisibleColumns] = useState([...defaultColumns]);
+    useEffect(() => {
+        fetchData();
+        setLoading(false);
+    }, []);
+    useEffect(() => {
+        // Fungsi ini akan dijalankan ketika data berubah
+        // Anda dapat menggunakan ref untuk mengakses nilai dalam Column
+        if (data) {
+            const newColumnMinWidths = {};
+            const newHeaderMinWidths = {};
+            visibleColumns.map((col) => {
+                // console.log(col.header);
+                newColumnMinWidths[col.field] = calculateColumnMinWidth(col.field);
+                // newHeaderMinWidths[col.header] = calculateHeaderMinWidth(col.header);
+            });
+            setColumnMinWidths(newColumnMinWidths);
+            // setHeaderMinWidths(newHeaderMinWidths);
+            // console.log(newColumnMinWidths);
+            // console.log(newHeaderMinWidths);
+        }
+    }, [data, visibleColumns]);
+    useEffect(() => {
+        // Fungsi ini akan dijalankan ketika data berubah
+        // Anda dapat menggunakan ref untuk mengakses nilai dalam Column
+        if (data) {
+            const newHeaderMinWidths = {};
+            columns.map((col) => {
+                newHeaderMinWidths[col.header] = calculateHeaderMinWidth(col.header);
+            });
+            setHeaderMinWidths(newHeaderMinWidths);
+            console.log(newHeaderMinWidths);
+        }
+    }, [data]);
+
+    const fetchData = async () => {
+        try {
+            const response = await fetch(`http://localhost:4000/api/v1/inventory/data`);
+            const jsonData = await response.json();
+            // console.log(jsonData);
+            const dataWithAdditionalFormattedData  = jsonData.map((item) => {
+                const tanggalGr = new Date(item.tanggalGr);
+                const tanggalGi = new Date(item.tanggalGi);
+                // const tanggalPo = new Date(item.tanggalPo);
+                const selisihTanggal = Math.abs(tanggalGr - tanggalGi) / (1000 * 60 * 60 * 24); // Selisih dalam hari
+                const DOI = `${selisihTanggal} Hari` // Selisih dalam hari
+                return { 
+                    ...item,
+                    DOI,
+                    // tanggalGr,
+                    // tanggalGi,
+                    // tanggalPo
+                };
+            });
+
+            // const dataWithAdditionalFormattedData = jsonData.map((item) => {
+            //     const { tanggalPo } = item;
+            //     const tanggalGr = new Date(item.tanggalGr);
+            //     const tanggalGi = new Date(item.tanggalGi);
+            //     const selisihTanggal = Math.abs(tanggalGr - tanggalGi) / (1000 * 60 * 60 * 24); // Selisih dalam hari
+            //     const DOI = `${selisihTanggal} Hari` // Selisih dalam hari
+            
+            //     return {
+            //         ...item,
+            //         tanggalPo: new Date(tanggalPo),
+            //         tanggalGr: new Date(tanggalGr),
+            //         tanggalGi: new Date(tanggalGi),
+            //         DOI, // Tambahkan selisih tanggal ke objek data
+            //     };
+            // });
+            
+    
+            setData(dataWithAdditionalFormattedData);
+            // setData(jsonData);
+        } catch (error) {
+            console.log("Error fetching data:", error);
+        }
+    }; 
+    // console.log(data);
+    const onColumnToggle = (event) => {
+        let selectedColumns = event.value;
+        let orderedSelectedColumns = columns.filter((col) => selectedColumns.some((sCol) => sCol.field === col.field));
+        setVisibleColumns(orderedSelectedColumns);
+    };
+    // Fungsi ini akan menghitung lebar minimum kolom berdasarkan kontennya
+    const calculateColumnMinWidth = (field) => {
+        let minWidth = 10; // Lebar minimum default
+        if (data) {
+            data.map((rowData) => {
+                const cellContent = rowData[field];
+                // console.log(cellContent);
+                if (cellContent && cellContent.length * 10 > minWidth) {
+                    // Hitung lebar minimum berdasarkan panjang konten
+                    minWidth = cellContent.length * 10;
+                }
+            });
+        }
+        return minWidth;
+    };
+    // const calculateHeaderMinWidth = (header) => {
+    //     let minWidth = 10; // Lebar minimum default
+    //     if (visibleColumns) {
+    //         visibleColumns.map((rowData) => {
+    //             const cellContent = rowData.header;
+    //             console.log(cellContent.length);
+    //             if (cellContent && cellContent.length > minWidth) {
+    //                 // Hitung lebar minimum berdasarkan panjang konten
+    //                 minWidth = cellContent.length * 2;
+    //             }
+    //         });
+    //     }
+    //     return minWidth;
+    // };
+    const calculateHeaderMinWidth = (header) => {
+        let minWidth = 10; // Lebar minimum default
+        if (columns) {
+            columns.map((col) => {
+                if (col.header === header) {
+                    const cellContent = col.header;
+                    if (cellContent && cellContent.length * 10 > minWidth) {
+                        // Hitung lebar minimum berdasarkan panjang konten
+                        minWidth = cellContent.length * 12;
+                    }
+                }
+            });
+        }
+        return minWidth;
+    };
+
+    const getCustomers = (data) => {
+        return [...(data || [])].map((d) => {
+            d.date = new Date(d.date);
+
+            return d;
+        });
+    };
+    const clearFilter = () => {
+        initFilters();
+    };
+    const onGlobalFilterChange = (e) => {
+        const value = e.target.value;
+        let _filters = { ...filters };
+
+        _filters['global'].value = value;
+
+        setFilters(_filters);
+        setGlobalFilterValue(value);
+    };
+
+    const initFilters = () => {
+        setFilters({
+            global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            namaProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            namaMaterial: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            statusProjek: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            nomorPo: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            kodeGi: { value: null, matchMode: FilterMatchMode.CONTAINS },
+            representative: { value: null, matchMode: FilterMatchMode.IN },
+            date: {
+                operator: FilterOperator.AND,
+                constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
+            },
+            // tanggalPo: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] }
+        });
+        setGlobalFilterValue("");
+    };
+    const renderHeader = () => {
+        return (
+            <div className="flex justify-between items-center">
+                <div>
+                    <SelectButton value={size} onChange={(e) => setSize(e.value)} options={sizeOptions} />
+                </div>
+
+                <div>
+                    <span className="p-input-icon-left mr-3 ">
+                        <i className="pi pi-search" />
+                        <InputText value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Keyword Search" />
+                    </span>
+                    <Button type="button" icon="pi pi-filter-slash" label="Clear" outlined onClick={clearFilter} />
+                </div>
+            </div>
+
+        );
+    };
+    const formatCurrency = (value) => {
+        return value.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+    };
+    const totalProjek = () => {
+
+        const uniqueProjects = new Set();
+
+        data?.map((project) => {
+            uniqueProjects.add(project.namaProjek);
+            return project; // Kembalikan project untuk memenuhi sintaksis map
+        });
+
+        const total = uniqueProjects.size;
+
+        return total;
+    };
+    const totalInventoryValue = () => {
+        let totalValue = 0;
+    
+        data?.map((project) => {
+            const inventoryValue = parseFloat(project.inventorValue);
+            if (!isNaN(inventoryValue)) {
+                totalValue += inventoryValue;
+            }
+            return project; 
+        });
+    
+        return formatCurrency(totalValue);
+    };
+
+    const header = renderHeader();
+    const renderFooter = () => {
+        return (
+            <div className="flex justify-between items-center">
+                <div>
+                    <Text>Total Projek: {totalProjek()} </Text> 
+                </div>
+
+                <div>
+                    <Text>Total Inventory Value: {totalInventoryValue()} </Text> 
+                </div>
+            </div>
+
+        );
+    };
+    const footer = renderFooter();
+    const formatDate = (value) => {
+        const date = new Date(value);
+        return date.toLocaleDateString("en-US", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    };
+
+    const dateBodyTemplate = (rowData, field) => {
+        // Format tanggal dalam tampilan
+        return formatDate(rowData[field]);
+    };
+
+    const dateFilterTemplate = (options) => {
+        return <Calendar value={options.value} onChange={(e) => options.filterCallback(e.value, options.index)} dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" mask="99/99/9999" />;
+    };
+    const filterApplyTemplate = (options) => {
+        return <Button type="button" icon="pi pi-check" onClick={options.filterApplyCallback} severity="success"></Button>;
+    };
+
+    
+
+
+    
+    
+
+    
+
+    return (
+        <div className="card">
+            <Panel header="All Data" className='m-9' toggleable>
+                <Panel header="Filter Column"  toggleable>
+                    <div >
+                        <MultiSelect value={visibleColumns} options={columns} optionLabel="header" onChange={onColumnToggle} className="w-full sm:w-20rem" display="chip" />
+                    </div>
+                </Panel>
+                <DataTable scrollable removableSort sortMode="multiple" scrollHeight="1000px" value={data} size={size} paginator rows={10} rowsPerPageOptions={[5, 10, 20, 50, 100]} dataKey="id" filters={filters} filterDisplay="row" loading={loading}  // Tambahkan ini
+                    globalFilterFields={['namaProjek', 'statusProjek', 'nomorPo', 'tanggalPo', 'namaMaterial', 'kodeGi']} header={header} footer={footer} emptyMessage="No data found.">
+                    {visibleColumns.map((col, index) => (
+                        // <Column  key={col.field} field={col.field} header={col.header} showFilterMenu={false} filterMenuStyle={{ width: 'auto' }} filter filterPlaceholder="Search" style={{ minWidth: `${headerMinWidths[col.header]}px` }}  />
+                        col.field === 'namaProjek' || col.field === 'namaVendor'
+                        ?
+                            (
+                                <Column key={col.field} field={col.field} header={col.header} showFilterMenu={false} filterMenuStyle={{ width: 'auto' }} filter filterPlaceholder="Search" style={{ minWidth: `${columnMinWidths[col.field]}px` }} sortable/>
+                            )
+                            :
+                            (
+                                <Column key={col.field} field={col.field} header={col.header} showFilterMenu={false} filterMenuStyle={{ width: 'auto' }} filter filterPlaceholder="Search" style={{ minWidth: `${headerMinWidths[col.header]}px` }} sortable/>
+                            )
+                        
+                    ))}
+                </DataTable>
+            </Panel>
+        </div>
+    );
+}
